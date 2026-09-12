@@ -1,0 +1,14 @@
+{
+  "name": "momos-royal-footprints",
+  "version": "1.0.0",
+  "description": "Royal Footprints Transport Ltd. Executive Airport & City Transfers",
+  "main": "index.html",
+  "scripts": {
+    "dev": "npx -y serve . -l 3000",
+    "start": "npx -y serve . -l 3000",
+    "serve:py": "python3 -m http.server 3000"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
