@@ -30,14 +30,19 @@ const POPULAR_ROUTES = [
 // Mobile Navigation Drawer Toggle
 function toggleMobileNav() {
   const drawer = document.getElementById('mobileNav');
+  const icon = document.getElementById('menuIcon');
   if (drawer) {
-    drawer.classList.toggle('active');
+    const isActive = drawer.classList.toggle('active');
+    if (icon) {
+      icon.textContent = isActive ? 'close' : 'menu';
+    }
   }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   initDefaultDateTime();
   updateCurrencyDisplay();
+  initLocationAutocomplete();
 });
 
 // Initialize DateTime picker to tomorrow 10:00 AM
@@ -60,8 +65,10 @@ function initDefaultDateTime() {
 // Currency Switcher
 function setCurrency(curr) {
   currentCurrency = curr;
-  document.getElementById('btn-usd').classList.toggle('active', curr === 'USD');
-  document.getElementById('btn-ugx').classList.toggle('active', curr === 'UGX');
+  document.querySelectorAll('.currency-btn').forEach(btn => {
+    const isUsd = btn.id.includes('usd');
+    btn.classList.toggle('active', (isUsd && curr === 'USD') || (!isUsd && curr === 'UGX'));
+  });
   updateCurrencyDisplay();
 }
 
@@ -246,4 +253,198 @@ function openFleetModal(fleetType) {
 
 function closeModal() {
   document.getElementById('fleetModal').classList.remove('active');
+}
+
+// GOOGLE LOCATION AUTOCOMPLETE & HELPER ENGINE
+const EXECUTIVE_LOCATIONS = [
+  { title: 'Entebbe International Airport (EBB)', subtitle: 'Main International Terminal, Airport Road', icon: 'flight_takeoff', category: 'Airport', keywords: 'ebb entebbe airport terminal flight' },
+  { title: 'Entebbe VIP & Diplomatic Air Lounge', subtitle: 'VIP Terminal, EBB Airport Road', icon: 'flight_takeoff', category: 'VIP Lounge', keywords: 'vip lounge entebbe charter private' },
+  { title: 'Kampala Serena Hotel', subtitle: 'Kintu Road, Nakasero, Kampala', icon: 'hotel', category: 'Luxury Hotel', keywords: 'serena hotel kampala nakasero' },
+  { title: 'Sheraton Kampala Hotel', subtitle: 'Ternan Avenue, Nakasero, Kampala', icon: 'hotel', category: 'Luxury Hotel', keywords: 'sheraton hotel kampala nakasero' },
+  { title: 'Speke Resort Munyonyo & Conference Centre', subtitle: 'Wavamunno Road, Lake Victoria, Munyonyo', icon: 'hotel', category: 'Resort', keywords: 'speke resort munyonyo commonwealth lake victoria' },
+  { title: 'Lake Victoria Serena Golf Resort & Spa', subtitle: 'Kigo, Entebbe Express Highway', icon: 'hotel', category: 'Golf Resort', keywords: 'serena kigo lake victoria golf resort spa' },
+  { title: 'Latitude 0 Degrees Hotel', subtitle: 'Mobutu Road, Bugolobi, Kampala', icon: 'hotel', category: 'Boutique Hotel', keywords: 'latitude 0 zero bugolobi hotel' },
+  { title: 'Protea Hotel Kampala Skyz', subtitle: 'Waterloo Road, Naguru, Kampala', icon: 'hotel', category: 'Luxury Hotel', keywords: 'protea skyz naguru hill kampala' },
+  { title: 'Protea Hotel Entebbe', subtitle: 'Airport Road, Entebbe Shoreline', icon: 'hotel', category: 'Airport Hotel', keywords: 'protea hotel entebbe airport road' },
+  { title: 'Hotel No.5 Entebbe', subtitle: 'Helena Road, Executive Entebbe', icon: 'hotel', category: 'Boutique Suites', keywords: 'hotel 5 no 5 entebbe' },
+  { title: 'Mestil Hotel & Residences', subtitle: 'Barracks Drive, Nsambya, Kampala', icon: 'hotel', category: 'Luxury Suites', keywords: 'mestil nsambya hotel residence' },
+  { title: 'The Boma Hotel Entebbe', subtitle: 'Julia Sebutinde Road, Entebbe', icon: 'hotel', category: 'Boutique Hotel', keywords: 'boma hotel entebbe' },
+  { title: 'Acacia Mall & Dining Hub', subtitle: 'Acacia Avenue, Kololo, Kampala', icon: 'business', category: 'Commercial Hub', keywords: 'acacia mall kololo shopping dining' },
+  { title: 'Oasis & Garden City Mall', subtitle: 'Yusuf Lule Road, Golf Course Area, Kampala', icon: 'business', category: 'Shopping Hub', keywords: 'oasis garden city mall kampala cbd' },
+  { title: 'Village Mall Bugolobi', subtitle: 'Spring Road, Bugolobi, Kampala', icon: 'business', category: 'Dining Hub', keywords: 'village mall bugolobi spring road' },
+  { title: 'Victoria Mall Entebbe', subtitle: 'Berkeley Road, Entebbe Town', icon: 'business', category: 'Shopping Hub', keywords: 'victoria mall entebbe town' },
+  { title: 'Nakasero Diplomatic District', subtitle: 'Nakasero Hill, Kampala Central', icon: 'location_on', category: 'Embassy Zone', keywords: 'nakasero embassy diplomatic district' },
+  { title: 'Kololo Executive Ridge', subtitle: 'Kololo Hill Drive, Kampala', icon: 'location_on', category: 'Executive Zone', keywords: 'kololo hill residence diplomatic' },
+  { title: 'Naguru Heights', subtitle: 'Naguru Drive, Kampala East', icon: 'location_on', category: 'Residential Zone', keywords: 'naguru heights kampala' },
+  { title: 'Jinja Source of the Nile Hub', subtitle: 'Nile Avenue, Jinja Adventure City', icon: 'location_on', category: 'Tourist Hub', keywords: 'jinja nile source rafting tour' }
+];
+
+function initLocationAutocomplete() {
+  setupAutocompleteForInput('pickupInput', 'pickupSuggestions', 'clearPickup');
+  setupAutocompleteForInput('dropoffInput', 'dropoffSuggestions', 'clearDropoff');
+
+  // Attempt Google Places API Autocomplete if Google Maps script is injected
+  if (window.google && window.google.maps && window.google.maps.places) {
+    try {
+      const pickupEl = document.getElementById('pickupInput');
+      const dropoffEl = document.getElementById('dropoffInput');
+      if (pickupEl) new window.google.maps.places.Autocomplete(pickupEl);
+      if (dropoffEl) new window.google.maps.places.Autocomplete(dropoffEl);
+    } catch (e) {
+      console.log('Google Places API initialized with local helper fallback.');
+    }
+  }
+}
+
+function setupAutocompleteForInput(inputId, dropdownId, clearBtnId) {
+  const input = document.getElementById(inputId);
+  const dropdown = document.getElementById(dropdownId);
+  const clearBtn = document.getElementById(clearBtnId);
+
+  if (!input || !dropdown) return;
+
+  let activeIndex = -1;
+
+  function renderSuggestions(query) {
+    const cleanQuery = query.toLowerCase().trim();
+    let matches = EXECUTIVE_LOCATIONS;
+
+    if (cleanQuery.length > 0) {
+      matches = EXECUTIVE_LOCATIONS.filter(loc => 
+        loc.title.toLowerCase().includes(cleanQuery) || 
+        loc.subtitle.toLowerCase().includes(cleanQuery) ||
+        loc.keywords.toLowerCase().includes(cleanQuery)
+      );
+    }
+
+    if (matches.length === 0 && cleanQuery.length > 0) {
+      dropdown.innerHTML = `
+        <div class="suggestion-item" onclick="selectCustomLocation('${inputId}', '${escapeHtml(query)}')">
+          <div class="suggestion-icon"><span class="material-symbols-outlined">edit_location</span></div>
+          <div class="suggestion-details">
+            <div class="suggestion-title">Use Custom Location: "${escapeHtml(query)}"</div>
+            <div class="suggestion-meta">
+              <span class="suggestion-sub">Custom address or landmark for dispatch</span>
+              <span class="suggestion-badge">Custom</span>
+            </div>
+          </div>
+        </div>
+        <div class="autocomplete-footer">
+          <span>Location Auto-Help Active</span>
+          <span style="color:var(--primary); font-weight:700;">Google Location Helper</span>
+        </div>
+      `;
+    } else {
+      let html = matches.slice(0, 6).map((loc, idx) => `
+        <div class="suggestion-item ${idx === activeIndex ? 'highlighted' : ''}" onclick="selectLocation('${inputId}', '${escapeHtml(loc.title)}')">
+          <div class="suggestion-icon"><span class="material-symbols-outlined">${loc.icon}</span></div>
+          <div class="suggestion-details">
+            <div class="suggestion-title">${loc.title}</div>
+            <div class="suggestion-meta">
+              <span class="suggestion-sub">${loc.subtitle}</span>
+              <span class="suggestion-badge">${loc.category}</span>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      html += `
+        <div class="autocomplete-footer">
+          <span>Google Location Auto-Help</span>
+          <span style="color:var(--primary); font-weight:700;">24/7 Verified Dispatch</span>
+        </div>
+      `;
+      dropdown.innerHTML = html;
+    }
+
+    dropdown.classList.add('active');
+  }
+
+  input.addEventListener('focus', () => {
+    renderSuggestions(input.value);
+    toggleClearBtn(input, clearBtn);
+  });
+
+  input.addEventListener('input', () => {
+    activeIndex = -1;
+    renderSuggestions(input.value);
+    toggleClearBtn(input, clearBtn);
+  });
+
+  input.addEventListener('keydown', (e) => {
+    const items = dropdown.querySelectorAll('.suggestion-item');
+    if (!items.length || !dropdown.classList.contains('active')) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIndex = (activeIndex + 1) % items.length;
+      updateHighlight(items, activeIndex);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIndex = (activeIndex - 1 + items.length) % items.length;
+      updateHighlight(items, activeIndex);
+    } else if (e.key === 'Enter') {
+      if (activeIndex >= 0 && items[activeIndex]) {
+        e.preventDefault();
+        items[activeIndex].click();
+      }
+    } else if (e.key === 'Escape') {
+      dropdown.classList.remove('active');
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.classList.remove('active');
+    }
+  });
+}
+
+function updateHighlight(items, index) {
+  items.forEach((item, i) => {
+    item.classList.toggle('highlighted', i === index);
+  });
+}
+
+function toggleClearBtn(input, clearBtn) {
+  if (clearBtn) {
+    clearBtn.style.display = input.value.trim().length > 0 ? 'flex' : 'none';
+  }
+}
+
+function clearLocationInput(inputId) {
+  const input = document.getElementById(inputId);
+  const dropdown = document.getElementById(inputId === 'pickupInput' ? 'pickupSuggestions' : 'dropoffSuggestions');
+  const clearBtn = document.getElementById(inputId === 'pickupInput' ? 'clearPickup' : 'clearDropoff');
+
+  if (input) {
+    input.value = '';
+    input.focus();
+  }
+  if (clearBtn) clearBtn.style.display = 'none';
+  if (dropdown) dropdown.classList.remove('active');
+}
+
+function selectLocation(inputId, text) {
+  const input = document.getElementById(inputId);
+  const dropdown = document.getElementById(inputId === 'pickupInput' ? 'pickupSuggestions' : 'dropoffSuggestions');
+  const clearBtn = document.getElementById(inputId === 'pickupInput' ? 'clearPickup' : 'clearDropoff');
+
+  if (input) {
+    input.value = text;
+    input.closest('.input-card').style.borderColor = 'var(--primary)';
+    setTimeout(() => {
+      input.closest('.input-card').style.borderColor = '#cbd5e1';
+    }, 800);
+  }
+  if (clearBtn) clearBtn.style.display = 'flex';
+  if (dropdown) dropdown.classList.remove('active');
+}
+
+function selectCustomLocation(inputId, text) {
+  selectLocation(inputId, text);
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }

@@ -30,9 +30,9 @@
 
       <div class="header-actions">
         <!-- Currency Selector -->
-        <div class="currency-toggle">
-          <button id="btn-usd" class="currency-btn active" onclick="setCurrency('USD')">$ USD</button>
-          <button id="btn-ugx" class="currency-btn" onclick="setCurrency('UGX')">UGX</button>
+        <div class="currency-toggle header-currency-toggle">
+          <button id="btn-usd-header" class="currency-btn active" onclick="setCurrency('USD')">$ USD</button>
+          <button id="btn-ugx-header" class="currency-btn" onclick="setCurrency('UGX')">UGX</button>
         </div>
 
         <a href="tel:+256700000000" class="phone-link">
@@ -48,18 +48,37 @@
 
         <!-- Mobile Menu Hamburger Button -->
         <button type="button" class="mobile-menu-btn" onclick="toggleMobileNav()" aria-label="Toggle Navigation Menu">
-          <span class="material-symbols-outlined">menu</span>
+          <span class="material-symbols-outlined" id="menuIcon">menu</span>
         </button>
       </div>
     </div>
 
     <!-- Mobile Drawer -->
     <div class="nav-mobile-drawer" id="mobileNav">
-      <a href="#transfers" class="nav-mobile-link" onclick="toggleMobileNav()">Transfers & Booking</a>
-      <a href="#fleet" class="nav-mobile-link" onclick="toggleMobileNav()">Executive Fleet</a>
-      <a href="#popular-routes" class="nav-mobile-link" onclick="toggleMobileNav()">Popular Route Rates</a>
-      <a href="#how-it-works" class="nav-mobile-link" onclick="toggleMobileNav()">Chauffeur Protocol</a>
-      <a href="#faq" class="nav-mobile-link" onclick="toggleMobileNav()">Frequently Asked Questions</a>
+      <div class="mobile-drawer-header">
+        <span class="mobile-drawer-label">Preferred Currency</span>
+        <div class="currency-toggle">
+          <button id="btn-usd-drawer" class="currency-btn active" onclick="setCurrency('USD')">$ USD</button>
+          <button id="btn-ugx-drawer" class="currency-btn" onclick="setCurrency('UGX')">UGX</button>
+        </div>
+      </div>
+      <div class="mobile-drawer-links">
+        <a href="#transfers" class="nav-mobile-link" onclick="toggleMobileNav()">Transfers & Booking</a>
+        <a href="#fleet" class="nav-mobile-link" onclick="toggleMobileNav()">Executive Fleet</a>
+        <a href="#popular-routes" class="nav-mobile-link" onclick="toggleMobileNav()">Popular Route Rates</a>
+        <a href="#how-it-works" class="nav-mobile-link" onclick="toggleMobileNav()">Chauffeur Protocol</a>
+        <a href="#faq" class="nav-mobile-link" onclick="toggleMobileNav()">Frequently Asked Questions</a>
+      </div>
+      <div class="mobile-drawer-actions">
+        <a href="tel:+256700000000" class="btn-mobile-phone">
+          <span class="material-symbols-outlined" style="font-size: 18px;">call</span>
+          <span>Call Dispatch: +256 700 000 000</span>
+        </a>
+        <a href="#" onclick="sendWhatsAppInquiry(); toggleMobileNav(); return false;" class="btn-mobile-whatsapp">
+          <span class="material-symbols-outlined" style="font-size: 18px;">chat</span>
+          <span>Book Chauffeur via WhatsApp</span>
+        </a>
+      </div>
     </div>
   </header>
 
@@ -108,19 +127,33 @@
           <!-- Input Fields Grid -->
           <div class="widget-grid">
             <!-- Pickup Location -->
-            <div class="input-card">
+            <div class="input-card autocomplete-wrapper">
               <label for="pickupInput" class="input-label">
+                <span class="material-symbols-outlined" style="font-size: 14px; color: var(--primary);">flight_takeoff</span>
                 Pick-up Location
               </label>
-              <input type="text" id="pickupInput" class="input-field" placeholder="e.g. Entebbe Airport (EBB) or Hotel">
+              <div class="input-with-action">
+                <input type="text" id="pickupInput" class="input-field" placeholder="Search airport, hotel, or address..." autocomplete="off">
+                <button type="button" class="btn-clear-input" id="clearPickup" onclick="clearLocationInput('pickupInput')" aria-label="Clear pickup location" style="display:none;">
+                  <span class="material-symbols-outlined" style="font-size: 16px;">close</span>
+                </button>
+              </div>
+              <div class="autocomplete-dropdown" id="pickupSuggestions"></div>
             </div>
 
             <!-- Drop-off Destination -->
-            <div class="input-card">
+            <div class="input-card autocomplete-wrapper">
               <label for="dropoffInput" class="input-label">
+                <span class="material-symbols-outlined" style="font-size: 14px; color: var(--primary);">location_on</span>
                 Drop-off Destination
               </label>
-              <input type="text" id="dropoffInput" class="input-field" placeholder="e.g. Kampala Serena Hotel or Address">
+              <div class="input-with-action">
+                <input type="text" id="dropoffInput" class="input-field" placeholder="Search hotel, resort, or Kampala destination..." autocomplete="off">
+                <button type="button" class="btn-clear-input" id="clearDropoff" onclick="clearLocationInput('dropoffInput')" aria-label="Clear drop-off destination" style="display:none;">
+                  <span class="material-symbols-outlined" style="font-size: 16px;">close</span>
+                </button>
+              </div>
+              <div class="autocomplete-dropdown" id="dropoffSuggestions"></div>
             </div>
 
             <!-- Date & Time -->
